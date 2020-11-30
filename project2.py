@@ -46,7 +46,7 @@ class Signature:
     def push_h(self, byte):
         self.sig += byte
         if (len(self.sig) > 2):
-            #print(str(self.sig[:2])[10:-1]
+            #print(str(self.sig[:2])[10:-1])
             if( str(self.sig[:2])[10:-1] in self.greater_2s_h):
                 pass
             else:
@@ -95,7 +95,7 @@ class Signature:
             return ret
 
         if (str(self.sig[:-1]) == self.headers["MPG"] and int(self.sig[3]) >= 176 and int(self.sig[3]) < 192):
-            print(self.sig)
+            #print(self.sig)
             ret = self.get_info("MPG")
             self.sig = bytearray()
             return ret
@@ -212,7 +212,18 @@ while byte:
             seek_header = True
 
     offset += 1
-    if (offset % 1000000 == 0):
-        print(str(offset))
+    #if (offset % 1000000 == 0):
+       # print(str(offset))
+
 
 print(files)
+byte = disk.read(-1)
+i = 0
+for data in files:
+    subdata=byte[data["offset"]:data["offset"]+data["len"]]
+    carve_file="CarvedFile_"+str(hex(data["offset"])) +"."+ data["Type"]
+    carve_obj=open(carve_file, 'wb')
+    carve_obj.write(subdata)
+    carve_obj.close()
+    i=i+1
+    print("Found an image, carving to "+carve_file)
