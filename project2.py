@@ -408,7 +408,7 @@ print(file_stats)
        # print(str(offset))
 
 
-print(files)
+p#rint(files)
 byte = disk.read(-1)
 i = 0
 for data in files:
