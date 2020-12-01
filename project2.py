@@ -98,63 +98,6 @@ class Signature:
 
     def push_h(self, byte):
         self.sig += byte
-<<<<<<< HEAD
-=======
-        if (len(self.sig) > 2):
-            #print(str(self.sig[:2])[10:-1])
-            if( str(self.sig[:2])[10:-1] in self.greater_2s_h):
-                pass
-            else:
-                del self.sig[0]
-        if (len(self.sig) == 4):
-            if (not( str(self.sig[:4])[10:-1] in self.greater_4s_h or str(self.sig[:3])[10:-1] == self.headers["MPG"])):
-                del self.sig[0]
-                del self.sig[0]
-        if (len(self.sig) > 4):
-            if( str(self.sig[:4])[10:-1] in self.greater_4s_h or str(self.sig[:2]) == self.headers["BMP"]):
-                pass
-            else:
-                del self.sig[0]
-        if (len(self.sig) == 6):
-            if (not( str(self.sig[:6])[10:-1] in self.greater_6s_h or str(self.sig[:4])[10:-1] == self.greater_8s_h) ):
-                del self.sig[0]
-                del self.sig[0]
-                del self.sig[0]
-                del self.sig[0]
-        if (len(self.sig) > 6):
-            if( str(self.sig[:6])[10:-1] in self.greater_6s_h or str(self.sig[:4])[10:-1] == self.greater_8s_h):
-                pass
-            else:
-                del self.sig[0]
-
-        if (len(self.sig) == 8):
-            if (not(str(self.sig[:4])[10:-1] == self.greater_8s_h or str(self.sig) == self.headers["PNG"])):
-                del self.sig[0]
-                del self.sig[0]
-                del self.sig[0]
-                del self.sig[0]
-                del self.sig[0]
-                del self.sig[0]
-
-        if( len(self.sig) > 8):
-            if( str(self.sig[:4])[10:-1] == self.greater_8s_h):
-                pass
-            else:
-                del self.sig[0]
-
-        if( str(self.sig) in self.headers.values() and str(self.sig) != self.headers["BMP"] and str(self.sig) != self.headers["MPG"]):
-            #print(self.sig)
-            ret = self.get_info()
-            self.sig = bytearray()
-            #print(ret["Type"])
-            return ret
-
-        if (str(self.sig[:-1]) == self.headers["MPG"] and int(self.sig[3]) >= 176 and int(self.sig[3]) < 192):
-            #print(self.sig)
-            ret = self.get_info("MPG")
-            self.sig = bytearray()
-            return ret
->>>>>>> 6838553e18dba9f4c7999cc615c3e85a67d1fc7f
         
         if (len(self.sig) < 16):
             return {"Type": "NULL", "len": 0}
