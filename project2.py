@@ -1,7 +1,11 @@
+import hashlib
+import os
+
 class Signature:
     sig = bytearray()
     foot = bytearray()
     last_pdf_foot_offset = 0
+    last_gif_foot_offset = 0
 
     headers = {
         #"BMP" : "BM",
@@ -32,19 +36,7 @@ class Signature:
             b'\xff\xd8\xff\xe0',
             b'\xff\xd8\xff\xe1',
             b'\xff\xd8\xff\xe2',
-            b'\xff\xd8\xff\xe3',
-            b'\xff\xd8\xff\xe4',
-            b'\xff\xd8\xff\xe5',
-            b'\xff\xd8\xff\xe6',
-            b'\xff\xd8\xff\xe7',
-            b'\xff\xd8\xff\xe8',
-            b'\xff\xd8\xff\xe9',
-            b'\xff\xd8\xff\xea',
-            b'\xff\xd8\xff\xeb',
-            b'\xff\xd8\xff\xec',
-            b'\xff\xd8\xff\xed',
-            b'\xff\xd8\xff\xee',
-            b'\xff\xd8\xff\xef',
+            b'\xff\xd8\xff\xe8'
         },
         #"DOCX" : "bytearray(b'PK\\x03\\x04\\x14\\x00\\x06\\x00')",
         "PNG" : b'\x89PNG\x0d\x0a\x1a\x0a',
@@ -207,8 +199,29 @@ class Signature:
             del self.foot[0]
 
             head = self.push_h(byte)
-            if (head["len"] != 0 and self.last_pdf_foot_offset > 0):
+            if (head["len"] != 0 and self.last_pdf_foot_offset > 0 and head["Type"] != "BMP"):
                 file_len = self.last_pdf_foot_offset - file_data["offset"]
+                self.last_pdf_foot_offset = 0
+                self.foot = bytearray()
+                return file_len
+            
+            return -1
+
+
+        if(file_data["Type"] == "GIF"):
+            
+            if( len(self.foot) < 2 ):
+                return -1
+            
+            #print(str(self.foot) + " " + str(len(self.foot)))
+            if (self.foot == self.footers["GIF"]):
+                #print(str(self.foot) + " " + str(len(self.foot)))
+                self.last_gif_foot_offset = offset
+            del self.foot[0]
+
+            head = self.push_h(byte)
+            if (head["len"] != 0 and self.last_gif_foot_offset > 0 and head["Type"] != "BMP"):
+                file_len = self.last_gif_foot_offset - file_data["offset"]
                 self.last_pdf_foot_offset = 0
                 self.foot = bytearray()
                 return file_len
@@ -246,6 +259,8 @@ file_stats = {
     "PNG": 0,
     "AVI": 0
 }
+disk_size = os.path.getsize("Project2Updated.dd")
+print("\n0", end='')
 while byte:
     byte = disk.read(1)
     if(seek_header):
@@ -253,31 +268,38 @@ while byte:
 
         if (file_data["len"] > 0):
             #print(file_data["Type"] + " " + str(file_data["len"]) + " " + str(hex(offset)) + "\n")
-            file_data["offset"] = offset - signature.headers_l[file_data["Type"]]
+            file_data["offset"] = offset - signature.headers_l[file_data["Type"]] + 1
             files.append(file_data)
             file_stats[file_data["Type"]] += 1
             if (file_data["Type"] != "BMP"):
                 disk.seek(file_data["len"], 1)
                 offset += file_data["len"]
         elif (file_data["len"] < 0):
-            file_data["offset"] = offset - signature.headers_l[file_data["Type"]]
+            file_data["offset"] = offset - signature.headers_l[file_data["Type"]] + 1
             seek_header = False
-            print(file_data["Type"])
+            #print(file_data["Type"])
     else:
         file_len = signature.push_f(byte, file_data, offset)
         #print(seek_header)
         if (file_len > 0):
             file_data["len"] = file_len
+            if (file_data["Type"] == "ZIP"):
+                file_data["len"] += 18
             files.append(file_data)
             file_stats[file_data["Type"]] += 1
-            print(file_data)
+            #print(file_data)
             seek_header = True
             
 
     offset += 1
-    if (offset % 100000 == 0):
-        print(str(offset/1000))
+    if (offset % int(disk_size / 10) == 0):
+        print(str((offset * 100.0)/disk_size), end='', flush=True)
 
+    elif ( offset % int(disk_size / 100) == 0 ):
+        print("-", end='', flush=True)
+
+
+print("\n")
 f_i = 0
 f_j = 1
 last_offset = 0
@@ -285,9 +307,9 @@ last_run_to = 0
 this_offset = 0
 bad_files = list()
 
-print(file_stats)
+#print(file_stats)
 
-print(len(files))
+#print(len(files))
 while f_i < len(files):
     if(files[f_i]["Type"] != "BMP"):
         f_i += 1
@@ -310,7 +332,7 @@ while f_i < len(files):
         f_j += 1
     f_i += 1
     
-print(len(bad_files))
+#print(len(bad_files))
 
 for f in bad_files:
     del files[f]
@@ -340,7 +362,7 @@ while f_i < len(files):
     
     f_i += 1
 
-print(len(bad_files))
+#print(len(bad_files))
 
 for f in bad_files:
     del files[f]
@@ -351,14 +373,22 @@ print(file_stats)
        # print(str(offset))
 
 
-p#rint(files)
+#print(files)
+disk.close()
+disk = open("Project2Updated.dd", "rb")
 byte = disk.read(-1)
 i = 0
 for data in files:
+    who = hashlib.sha256()
     subdata=byte[data["offset"]:data["offset"]+data["len"]]
-    carve_file="CarvedFile_"+str(hex(data["offset"])) +"."+ data["Type"]
+    #print(len(subdata))
+    who.update(subdata)
+    if (data["Type"] == "ZIP" and subdata[4:8] == b'\x14\x00\x06\x00'):
+        data["Type"] = "DOCX"
+    carve_file="CarvedFile_"+str(data["offset"]) +"."+ data["Type"]
     carve_obj=open(carve_file, 'wb')
     carve_obj.write(subdata)
     carve_obj.close()
+    who_hash = who.hexdigest()
     i=i+1
-    print("Found an image, carving to "+carve_file)
+    print("Found an image, carving to "+ carve_file + " sha256 hash: " + str(who_hash))
