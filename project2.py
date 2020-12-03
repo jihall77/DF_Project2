@@ -6,6 +6,7 @@ class Signature:
     foot = bytearray()
     last_pdf_foot_offset = 0
     last_gif_foot_offset = 0
+    pdf_related_file_data = {"Type": "NULL", "len": 0}
 
     headers = {
         #"BMP" : "BM",
@@ -203,6 +204,8 @@ class Signature:
                 file_len = self.last_pdf_foot_offset - file_data["offset"]
                 self.last_pdf_foot_offset = 0
                 self.foot = bytearray()
+                self.pdf_related_file_data = head
+                self.pdf_related_file_data["offset"] = offset - self.headers_l[self.pdf_related_file_data["Type"]] + 1
                 return file_len
             
             return -1
@@ -224,6 +227,8 @@ class Signature:
                 file_len = self.last_gif_foot_offset - file_data["offset"]
                 self.last_pdf_foot_offset = 0
                 self.foot = bytearray()
+                self.pdf_related_file_data = head
+                self.pdf_related_file_data["offset"] = offset - self.headers_l[self.pdf_related_file_data["Type"]] + 1
                 return file_len
             
             return -1
@@ -289,7 +294,19 @@ while byte:
             file_stats[file_data["Type"]] += 1
             #print(file_data)
             seek_header = True
-            
+            if (signature.pdf_related_file_data["Type"] != "NULL"):
+                file_data = signature.pdf_related_file_data
+                seek_header = False
+                signature.pdf_related_file_data = {"Type": "NULL", "len": 0}
+                if( file_data["Type"] == "AVI" ):
+                    files.append(file_data)
+                    file_stats[file_data["Type"]] += 1
+                    disk.seek(file_data["len"], 1)
+                    offset += file_data["len"]
+                    seek_header = True
+                
+                
+                
 
     offset += 1
     if (offset % int(disk_size / 10) == 0):
@@ -385,7 +402,7 @@ for data in files:
     who.update(subdata)
     if (data["Type"] == "ZIP" and subdata[4:8] == b'\x14\x00\x06\x00'):
         data["Type"] = "DOCX"
-    carve_file="CarvedFile_"+str(data["offset"]) +"."+ data["Type"]
+    carve_file="CarvedFile_"+str(data["offset"]) + "_to_" + str(data["offset"] + data["len"]) +"."+ data["Type"]
     carve_obj=open(carve_file, 'wb')
     carve_obj.write(subdata)
     carve_obj.close()
